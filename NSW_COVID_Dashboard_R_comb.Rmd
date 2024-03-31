@@ -1,0 +1,367 @@
+---
+title: "NSW COVID-19 Cases Dashboard"
+#author: "Melvin Galera"
+#date: "2024-03-30"
+output:
+  flexdashboard::flex_dashboard:
+runtime: shiny
+---
+
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(lubridate)
+library(scales)
+library(glue)
+library(shiny)
+library(leaflet)
+library(sf)
+library(rmapshaper)
+library(htmltools)
+library(DT)
+library(plotly)
+library(ggplot2)
+library(gganimate)
+library(stringr)
+library(viridis)
+```
+
+## Fetch/load data
+
+```{r fetch or load latest data}
+# If accessing the latest version of data from data.nsw.gov.au
+
+# DATA1: NSW COVID-19 cases by location
+by_location_url <- ("https://data.nsw.gov.au/data/dataset/aefcde60-3b0c-4bc0-9af1-6fe652944ec2/resource/5d63b527-e2b8-4c42-ad6f-677f14433520/download/confirmed_cases_table1_location_agg.csv")
+
+# DATA2: NSW COVID-19 cases by age range
+by_agegroup_url <- ("https://data.nsw.gov.au/data/dataset/3dc5dc39-40b4-4ee9-8ec6-2d862a916dcf/resource/4b03bc25-ab4b-46c0-bb3e-0c839c9915c5/download/confirmed_cases_table2_age_group_agg.csv")
+
+
+# Create location dataset with latest data
+# df_location <- read.csv(url(by_location_url))
+# Create agegroup dataset with latest data
+# df_agegroup <- read.csv(url(by_agegroup_url))
+
+# Note: the data repository has stopped updating with the last update on 31/10/2023
+# Hence, the latest aggregated data were downloaded and can be loaded as below:
+
+# Create location dataset with latest data
+df_location <- read.csv("./data/confirmed_cases_table1_location_agg.csv")
+# Create agegroup dataset with latest data
+df_agegroup <- read.csv("./data/confirmed_cases_table2_age_group_agg.csv")
+
+```
+
+
+
+## PAGE 1 - CASE SUMMARIES
+
+```{r page1 part1 all_nsw prep}
+# All NSW Calculation
+df_location_nsw <- df_location %>% 
+  mutate(notification_date = as.Date(notification_date)) %>% 
+  select(notification_date, lhd_2010_name, confirmed_cases_count)
+
+df_location_nsw2 <- df_location_nsw %>% 
+  group_by(notification_date) %>% 
+  summarise(cases = sum(confirmed_cases_count))
+
+# Define the last recorded date
+max_notif_date <- max(df_location_nsw$notification_date)
+
+# Create lhd groupings
+metro_lhd <- c("Central Coast", "Northern Sydney", "South Western Sydney", "South Eastern Sydney", 
+               "Sydney", "Western Sydney", "Nepean Blue Mountains", "Illawarra Shoalhaven")
+
+rural_lhd <- c("Hunter New England", "Murrumbidgee", "Western NSW", "Northern NSW", 
+               "Southern NSW", "Mid North Coast", "Far West")
+
+```
+
+
+```{r page1 part2 info in map-LHD}
+# Create source dataset for cumulated cases per LHD (and new column for identifying metro or RR lhd)
+df_location_mapCS <- df_location_nsw %>% 
+                      select(lhd_2010_name, confirmed_cases_count) %>% 
+                      group_by(lhd_2010_name) %>% 
+                      summarise(cumulated_cases = sum(confirmed_cases_count)) %>% 
+                      mutate(lhd_loc = case_when(lhd_2010_name %in% metro_lhd ~ "Metropolitan LHD",
+                             lhd_2010_name %in% rural_lhd ~ "Rural and Regional NSW LHD",
+                             lhd_2010_name == "Correctional settings" ~ "Correctional settings",
+                             lhd_2010_name == "Hotel Quarantine" ~ "Hotel Quarantine")) %>% 
+                      select(lhd_loc, lhd_2010_name, cumulated_cases) %>% 
+                      arrange(lhd_loc, lhd_2010_name)
+
+
+# Create source dataset for last-date cases per LHD
+df_location_lastday <- df_location_nsw %>% 
+                        filter(notification_date == max_notif_date) %>% 
+                        select(lhd_2010_name, confirmed_cases_count) %>% 
+                        group_by(lhd_2010_name) %>% 
+                        summarise(cases_lastday = sum(confirmed_cases_count)) %>% 
+                        arrange(lhd_2010_name)
+
+# Create source dataset for this week cases per LHD
+df_location_thisweek <- df_location_nsw %>% 
+                        filter(notification_date > (max(notification_date) - 7) & 
+                            notification_date <= (max(notification_date))) %>% 
+                        select(lhd_2010_name, confirmed_cases_count) %>% 
+                        group_by(lhd_2010_name) %>% 
+                        summarise(lhd_cases_thisweek =sum(confirmed_cases_count)) %>% 
+                        arrange(lhd_2010_name)
+
+# Combine LHD datasets
+df_location_map <- df_location_mapCS %>% 
+                      filter(lhd_loc == "Metropolitan LHD" | lhd_loc == "Rural and Regional NSW LHD") %>% 
+                      left_join(df_location_lastday) %>% 
+                      left_join((df_location_thisweek)) %>% 
+                      rename(LHD_name = lhd_2010_name)
+
+```
+
+
+```{r page1 part3 info in map-LGA}
+# Create source dataset with cumulated cases per LGA
+df_location_lga_CS <- df_location %>% 
+                      select(lga_name19, confirmed_cases_count) %>% 
+                      group_by(lga_name19) %>% 
+                      summarise(cumulated_cases = sum(confirmed_cases_count)) %>% 
+                      arrange(lga_name19)
+
+# Create source dataset with last-date cases per LGA
+df_location_lga_lastday <- df_location %>% 
+                        mutate(notification_date = as.Date(notification_date)) %>% 
+                        filter(notification_date == max(notification_date)) %>% 
+                        select(lga_name19, confirmed_cases_count) %>% 
+                        group_by(lga_name19) %>% 
+                        summarise(cases_lastday = sum(confirmed_cases_count)) %>% 
+                        arrange(lga_name19)
+
+# Create source dataset for this week cases per LHD
+df_location_lga_thisweek <- df_location %>% 
+                        mutate(notification_date = as.Date(notification_date)) %>% 
+                        filter(notification_date > (max(notification_date) - 7) & 
+                            notification_date <= (max(notification_date))) %>% 
+                        select(lga_name19, confirmed_cases_count) %>% 
+                        group_by(lga_name19) %>% 
+                        summarise(lga_cases_thisweek =sum(confirmed_cases_count)) %>% 
+                        arrange(lga_name19)
+
+# Combine LGA datasets
+df_location_lga_comb <- df_location_lga_CS %>% 
+                        left_join(df_location_lga_thisweek) %>% 
+                        left_join(df_location_lga_lastday)
+
+df_location_lga_comb <- df_location_lga_comb %>% 
+                          replace(is.na(.), 0) %>% 
+                          mutate(LGA_NAME = str_replace(lga_name19, "\\s*\\([^\\)]+\\)", "")) %>% 
+                          select(-lga_name19)
+  
+```
+
+
+```{r page1 part4 extracting map shapes-LHD}
+# Extract shape 
+nswlgas <- read_sf("NOV21_NSW_LGA_POLYGON_shp/nsw_lga.shp")
+
+
+# 1. Extracting shape files for LHD
+
+# LGA to LHD mapping derived from pages at https://www.healthstats.nsw.gov.au/#/locations
+lga2lhd <- read_csv("./data/NSW_LHD_LGA_names.csv")
+
+# join LHD mapping to LGA boundaries by LGA name
+nswlgas <- nswlgas %>%
+  left_join(lga2lhd, by = c("ABB_NAME" = "LGA_name")) %>%
+  filter(!is.na(LHD_name))
+
+# group by LHD and remove interior boundaries of the union
+nswlhds <- nswlgas %>% 
+  group_by(LHD_name) %>% 
+  summarise(geometry = st_union(geometry))
+
+# reduce the detail of the boundaries to a more manageable level
+nswlhds_simplified <- ms_simplify(nswlhds, keep = 0.1, keep_shapes = TRUE)
+
+
+# Combine df_location_map with the polygon map
+nswlhds_simplified_polys <- left_join(nswlhds_simplified, df_location_map)
+
+```
+
+
+```{r page1 part5 extracting map shapes-LGA}
+# 2. Extracting shape files for LGA
+
+nswlgas_simplified <- ms_simplify(nswlgas, keep = 0.1, keep_shapes = TRUE)
+nswlgas_simplified_2 <- nswlgas_simplified %>% 
+                          select(ABB_NAME, geometry)
+
+nswlgas_simplified_2polys <- left_join(nswlgas_simplified_2, df_location_lga_comb, 
+                                       by = c("ABB_NAME" = "LGA_NAME")) %>% 
+                              replace(is.na(.), 0)
+```
+
+
+```{r page1 part6 creating tables}
+# Create LHS table for rendering
+lhd_cases_table <- df_location_map %>%
+                      select(LHD_name, cases_lastday, lhd_cases_thisweek, cumulated_cases) %>% 
+                      arrange(desc(cases_lastday))
+# Rename LHD column names
+lhd_cases_table <- rename(lhd_cases_table, c(LHD = LHD_name, Reported_Day = cases_lastday,
+                                             This_Week = lhd_cases_thisweek, Total_Cases = cumulated_cases))
+
+
+# Create LGA table for rendering
+lga_cases_table <- df_location_lga_comb %>% 
+                      select(LGA_NAME, cases_lastday, lga_cases_thisweek, cumulated_cases) %>% 
+                      arrange(desc(cases_lastday))
+
+# Rename LGA column names
+lga_cases_table <- rename(lga_cases_table, c(LGA = LGA_NAME, Reported_Day = cases_lastday,
+                                             This_Week = lga_cases_thisweek, Total_Cases = cumulated_cases))
+
+
+```
+
+
+## PAGE 2 - LHD EPICURVES
+
+```{r page2 preparation}
+
+# LHD Calculations 
+
+# Create source for creating choices for selectInput in page2 
+df_choices <- df_location_nsw %>% 
+              group_by(lhd_2010_name) %>% 
+              summarise(cases = sum(confirmed_cases_count, na.rm = TRUE)) %>% 
+              mutate(lhd_loc = case_when(lhd_2010_name %in% metro_lhd ~ "Metropolitan LHD",
+                             lhd_2010_name %in% rural_lhd ~ "Rural and Regional NSW LHD",
+                             lhd_2010_name == "Correctional settings" ~ "Correctional settings",
+                             lhd_2010_name == "Hotel Quarantine" ~ "Hotel Quarantine"
+                               )) %>% 
+              mutate(location = case_when(lhd_loc == "Metropolitan LHD" ~ "LHD",
+                                          lhd_loc == "Rural and Regional NSW LHD" ~ "LHD",
+                                          lhd_loc %in% c("Correctional settings", "Hotel Quarantine") ~ "Non-LHD")
+                     ) %>% 
+              select(location, lhd_loc, lhd_2010_name) %>% 
+              add_row(location = c("All NSW", "LHD", "LHD"),
+                      lhd_loc = c("------", "Metropolitan LHD", "Rural and Regional NSW LHD"),
+                      lhd_2010_name = c("------", "All Metropolitan LHD", "All Rural and Regional LHD")) %>% 
+              arrange(location, lhd_loc, lhd_2010_name)
+
+
+# Create source dataset grouped by LHD epicurves
+df_location_lhd <-  df_location_nsw %>% 
+                      group_by(notification_date, lhd_2010_name) %>% 
+                      summarise(cases = sum(confirmed_cases_count, na.rm = TRUE)) 
+
+df_location_lhd_loc <- df_location_lhd %>% 
+                        mutate(lhd_loc = case_when(lhd_2010_name %in% metro_lhd ~ "Metropolitan LHD",
+                             lhd_2010_name %in% rural_lhd ~ "Rural and Regional NSW LHD",
+                             lhd_2010_name %in% c("Correctional settings", "Hotel Quarantine") ~ "Others"
+                               ))
+
+# Create source dataset for metro-LHD epicurves
+df_location_lhd_loc_metro <- df_location_lhd_loc %>% 
+                              filter(lhd_loc == "Metropolitan LHD") %>% 
+                              select(-lhd_loc)
+
+# Create source dataset for rural and regional -LHD epicurves
+df_location_lhd_loc_rural <- df_location_lhd_loc %>% 
+                              filter(lhd_loc == "Rural and Regional NSW LHD") %>% 
+                              select(-lhd_loc)
+
+# Create function to change themes, scales and add labels in ggplots
+plotdetails <- function(location_name, a, b) {
+  plot_details <- list(theme_minimal(), 
+                    theme(legend.position = 'none',
+                          axis.text.y = element_text(size = rel(1.3)),
+                          axis.text.x = element_text(size = rel(a)),
+                          axis.title = element_text(size = rel(1.5), face = 'bold'),
+                          plot.title = element_text(size = rel(2), face = 'bold'),
+                          legend.title = element_text(size = rel(1.5), face = 'bold'),
+                          legend.text = element_text(size = rel(1.5)),
+                          strip.text.x = element_text(size = rel(1.5))),
+                    scale_x_date(date_labels = "%d %b %y",
+                                breaks = pretty_breaks(n = b)),
+                    scale_y_continuous(breaks = pretty_breaks(n = 8),
+                                labels = comma),
+                    labs(title = glue::glue("COVID-19 Epicurve(s) for confirmed incident cases in {location_name}"),
+                         x = "Date", 
+                         y = "Incident cases"))
+  return(plot_details)}
+
+```
+
+
+
+## PAGE 3 - LHD EPICURVES
+
+```{r page3 part1 preparation}
+# Simplify age group names
+df_agegroup <- df_agegroup %>% 
+                mutate(notification_date = as.Date(notification_date)) %>%   
+                mutate(Age_group = str_remove(age_group, "AgeGroup_")) %>% 
+                select(-age_group) %>% 
+                select(notification_date, Age_group, everything())
+
+# Convert age group to factor
+df_agegroup$Age_group <- as.factor(df_agegroup$Age_group)
+
+# Create source dataset for summed cases per age group
+df_agegroup_cases <- df_agegroup %>% 
+                      group_by(Age_group) %>%
+                      summarise(cases = sum(confirmed_cases_count)) %>% 
+                      mutate(percentage = percent(cases/sum(cases), accuracy = 0.1, trim = FALSE)) %>% 
+                      select(Age_group, cases, percentage)
+
+```
+
+
+```{r page3 part2 cumulative curves}
+# Define the age group
+age_group_range <- c("0-19","20-24","25-29", "30-34", "35-39", "40-44", "45-49",
+         "50-54", "55-59", "60-64", "65-69", "70+", "None")
+
+# Pivot wider to get cumulative sum for each age group
+pivoted_agegroup <- df_agegroup %>% 
+        pivot_wider(names_from = Age_group, values_from = confirmed_cases_count) %>% 
+        replace(is.na(.), 0) %>% 
+        select(-confirmed_by_pcr)
+
+# Compute for cumsum
+cs_pivoted_agegroup <- pivoted_agegroup
+
+for (i in 2:ncol(pivoted_agegroup)) {
+  cs_pivoted_agegroup[, i ] <- cumsum(unlist(pivoted_agegroup[, i]))
+}
+
+# Pivot longer and create source dataset for agegroup cumsum
+cs_agegroup <- cs_pivoted_agegroup %>% 
+                pivot_longer(all_of(age_group_range), names_to = "Age_group", 
+                             values_to = "cumulative_cases") %>% 
+                mutate(daynum = difftime(notification_date, min(notification_date), units = "days"))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

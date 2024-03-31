@@ -1,0 +1,605 @@
+---
+title: "NSW COVID-19 Cases Dashboard"
+#author: "Melvin Galera"
+#date: "2024-03-30"
+output:
+  flexdashboard::flex_dashboard:
+    theme:
+      version: 4
+      bootswatch: cosmo
+      bg: "#101010"
+      fg: "#FDF7F7"
+      primary: "#ED79F9"
+      secondary: "darkred"
+      navbar-bg: "#3ADAC6"
+      base_font:
+        google: Prompt
+      base_font-size: 0.8875  
+      heading_font:
+        google: Sen
+      code_font: 
+        google:
+          # arguments to sass::font_google()
+          family: JetBrains Mono
+          local: false
+runtime: shiny
+---
+
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(lubridate)
+library(scales)
+library(glue)
+library(shiny)
+library(leaflet)
+library(sf)
+library(rmapshaper)
+library(htmltools)
+library(DT)
+library(plotly)
+library(ggplot2)
+library(gganimate)
+library(stringr)
+library(viridis)
+
+
+knitr::opts_chunk$set(cache = FALSE)
+```
+
+```{r load scripts, cache=FALSE, include=FALSE}
+source("p1_get_NSW_data.R")
+source("p2_extract_nsw_maps.R")
+source("p3_create_epicurves.R")
+source("p4_create_agegroup.R")
+
+```
+
+
+<!--```{r, include=FALSE, context = "server"} 
+bslib::bs_themer() 
+
+``` -->
+
+
+
+
+Cases Summaries {data-orientation=rows}
+======================================================================
+
+
+Sidebar {.sidebar}
+-----------------------------------------------------------------------
+### Overview
+
+This page displays the number of COVID-19 cases from the last reported day (normally up to 4pm of the previous day), cases this week, last week and the total cases in all New South Wales. 
+
+It also features cumulative cases mapped to locations by Local Health District (LHD) and Local Government Area (LGA). Last reported day cases and total or cumulative cases are also displayed when hovering over a specific location. Zoom in to view smaller metropolitan LHDs and Sydney LGAs.
+
+A Summary Table is provided to display COVID-19 case numbers for each LHD and LGA, arranged based on which area recorded the highest cases on the last reported day.  
+
+```{r}
+radioButtons('category', 'Select Summary Table by:',
+             c("Local Health District(LHD)" = "lhd",
+               "Local Government Area (LGA)" = "lga"))
+```
+
+
+
+Row
+-----------------------------------------------------------------------
+
+### Cases on the last date {.value-box}
+
+```{r p1 last date vbox}
+# Compute the total cases on the last reported date (max_notif_date)
+renderValueBox({
+  last_day_cases <- df_location_nsw %>% 
+                    filter(notification_date == max(notification_date)) %>% 
+                    summarise(cases = sum(confirmed_cases_count))
+  valueBox(formatC(last_day_cases$cases, big.mark = ","),
+           caption = glue::glue("Cases on last reporting day: {max_notif_date}"))
+})
+```
+
+
+### Cases this week {.value-box}
+
+```{r p1 this week vbox}
+# Compute the total cases on this week
+renderValueBox({
+  this_week_cases <- df_location_nsw %>% 
+                     filter((notification_date > max(notification_date) - 7) & 
+                            notification_date <= max_notif_date) %>% 
+                     summarise(cases = sum(confirmed_cases_count))
+  weekstarter1 <- max(df_location_nsw$notification_date) - 6
+  valueBox(formatC(this_week_cases$cases, big.mark = ","),
+           caption = glue::glue("Cases this week: {weekstarter1} to {max_notif_date}"))
+})
+```
+
+
+### Cases last week {.value-box}
+
+```{r p1 last week vbox}
+# Compute the total cases on last week
+renderValueBox({
+  last_week_cases <- df_location_nsw %>%
+                     filter((notification_date > max(notification_date) - 14) & 
+                            (notification_date <= max(notification_date) - 7)) %>% 
+                     summarise(cases = sum(confirmed_cases_count)) 
+  weekstarter2 <- max(df_location_nsw$notification_date) - 13
+  weekender2 <- max(df_location_nsw$notification_date) - 7
+  valueBox(formatC(last_week_cases$cases, big.mark = ","),
+           caption = glue::glue("Cases last week: {weekstarter2} to {weekender2}"))
+})
+```
+
+### Total cases since the start {.value-box}
+
+```{r p1 total cases vbox}
+# Calculate total cases since the start (first date)
+renderValueBox({
+  total_cases <- sum(df_location_lhd$cases, na.rm = TRUE) 
+  startdate <- min(df_location_nsw$notification_date)
+  valueBox(formatC(total_cases, big.mark = ","),
+           caption = glue::glue("Cases since {startdate}"))
+})
+```
+
+
+
+Row 
+-----------------------------------------------------------------------
+
+### Local COVID-19 transmission in New South Wales
+
+```{r p1 create transmission map, fig.width = 350}
+# Create NSW map with leaflet
+
+# Create color palette base on total cases
+cases_pal <- colorNumeric(c("lightyellow", "darkred"), c(0, 500000))
+cases_pal2 <- colorNumeric(c("lightyellow", "darkblue"), c(0, 175000))
+
+# Create labels
+labels_content <- paste0(
+         "<strong> LHD: </strong>", nswlhds_simplified_polys$LHD_name, "<br/>",
+         "<strong> Cases on </strong>", max_notif_date, "<strong> : </strong>", 
+                                       nswlhds_simplified_polys$cases_lastday, "<br/>",
+         "<strong> Cumulative Cases: </strong>", nswlhds_simplified_polys$cumulated_cases, "<br/>"
+          ) %>% 
+          lapply(htmltools::HTML)
+
+labels_content2 <- paste0(
+          "<strong> LGA: </strong>", nswlgas_simplified_2polys$ABB_NAME, "<br/>",
+          "<strong> Cases on </strong>", max_notif_date, "<strong> : </strong>", 
+                                         nswlgas_simplified_2polys$cases_lastday, "<br/>",
+          "<strong> Cumulative Cases: </strong>", nswlgas_simplified_2polys$cumulated_cases, "<br/>"
+          ) %>% 
+          lapply(htmltools::HTML)
+
+
+# Render map
+renderLeaflet({
+  mapcases <- leaflet() %>% 
+              addTiles() %>% 
+              addPolygons(data = nswlhds_simplified_polys,
+                    weight = 2,
+                    color = "darkgrey",
+                    dashArray = "2",
+                    fillColor = cases_pal(nswlhds_simplified_polys$cumulated_cases),
+                    fillOpacity = 0.7,
+                    label = labels_content,
+                    labelOptions = labelOptions(style = list("font-weight" = "normal", 
+                                          padding = "3px 8px"),
+                                          textsize = "12px",
+                                          direction = "auto"),
+                    highlight = highlightOptions(color = "darkred",
+                                           weight = 2,
+                                           dashArray = "",
+                                           bringToFront = TRUE),
+                                           group = "By LHD") %>% 
+              addPolygons(data = nswlgas_simplified_2polys,
+                    weight = 2,
+                    color = "darkgrey",
+                    dashArray = "2",
+                    fillColor = cases_pal2(nswlgas_simplified_2polys$cumulated_cases),
+                    fillOpacity = 0.7,
+                    label = labels_content2,
+                    labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px"),
+                                          textsize = "12px",
+                                          direction = "auto"),
+                    highlight = highlightOptions(color = "darkblue",
+                                           weight = 2,
+                                           dashArray = "",
+                                           bringToFront = TRUE),
+                    group = "By LGA") %>%
+              addLegend("bottomleft", 
+                    pal = cases_pal, 
+                    values =  nswlhds_simplified_polys$cumulated_cases,
+                    title = "COVID-19 Cumulative cases by LHD",
+                    opacity = 1,
+                    group = "By LHD") %>% 
+              addLegend("bottomright", 
+                    pal = cases_pal2, 
+                    values =  nswlgas_simplified_2polys$cumulated_cases,
+                    title = "COVID-19 Cumulative cases by LGA",
+                    opacity = 1,
+                    group = "By LGA") %>% 
+              addLayersControl(
+                    position = "topleft",
+                    baseGroups = c("By LHD", "By LGA"),
+                    options = layersControlOptions(collapsed = FALSE)
+                     ) %>% 
+              hideGroup(c("By LHD", "By LGA")) %>% 
+              showGroup("By LHD")
+})  
+## Note: Tried to toggle between legend of different layers but could not work it out. Tried googling online but the work-around would not render the desired output.
+
+```
+
+
+### Cases Summary Table
+
+```{r p1 summary tables, fig.width = 250}
+# Render summary tables
+renderTable({
+  if (input$category == "lhd") {
+  table <- lhd_cases_table
+  }
+  else 
+  if (input$category == "lga") {
+  table <- lga_cases_table
+  }
+  table
+}, rownames = TRUE, width = "auto")
+
+```
+
+
+
+
+LHD Epicurves {data-orientation=rows}
+======================================================================
+
+
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+### COVID cases
+
+From this page, Epicurves of COVID-19 cases can be displayed based on selected location. It can display the general epicurve for the whole NSW, or based on selected LHD. Epicurves can be easily compared for areas within Metropolitan LHD or within the Rural and Regional LHD. Coverage period can also be selected. 
+
+Figures will be displayed after the 'Go' button is clicked.    
+
+
+```{r p2 input}
+
+selectInput('mainlocation', "Select location category",
+            choices = c("------", 
+                        "All NSW",
+                        "LHD"),
+            selected = "------")
+
+selectInput('grouplhd', 'Select location',
+            choices = NULL)
+
+selectInput('specificlhd', 'Select specific LHD',
+            choices = NULL)
+
+radioButtons('period', 'Select coverage period:',
+             c("From January 2022" = "yr2022",
+               "From January 2021" = "yr2021",
+               "From January 2020" = "yr2020"))
+
+actionButton('go_plot', 'Go')
+
+```
+
+
+
+Row
+-----------------------------------------------------------------------
+
+### Epicurves or daily count of incident (new) cases 
+
+```{r p2 epicurves}
+
+# Create observeEvent and reactive functions 
+
+# To fill up selectInput choices
+main_location <- reactive({
+                  req(input$mainlocation)
+                  filter(df_choices, location == input$mainlocation)
+                  })
+
+observeEvent(main_location(), {
+  updateSelectInput(inputId = "grouplhd", choices = unique(main_location()$lhd_loc))
+})
+
+
+group_lhd <- reactive({
+              req(input$grouplhd)
+              filter(main_location(), lhd_loc == input$grouplhd)
+              })
+
+observeEvent(group_lhd(), {
+  updateSelectInput(inputId = "specificlhd", choices = group_lhd()$lhd_2010_name )
+})
+
+
+# To output default plot  before using actionButton
+lhdmap <- reactive({
+  lhdmap_plot <-  ggplotly(
+                    ggplot(nswlgas_simplified) +
+                    geom_sf(aes(fill = LHD_name)) +
+                    scale_fill_viridis(discrete = TRUE) +
+                        labs(fill = "LHD", 
+                             title = "NSW Local Health Districts (LHD) Mapping"))
+  return(lhdmap_plot)
+})
+
+observeEvent(input$mainlocation, {
+  req(input$mainlocation == "------")
+  lhdmap()
+}) 
+
+
+# Create eventReactive functions for the actionButton
+plot_lhd <- eventReactive(input$go_plot, {
+            req(input$mainlocation, input$grouplhd, input$specificlhd, input$period)
+            selected_period <- case_when(input$period == "yr2022" ~ "2021-12-31",
+                                         input$period == "yr2021" ~ "2020-12-31",
+                                         input$period == "yr2020" ~ "2019-12-31")
+
+  # Epicurve for NSW
+  if (input$mainlocation == "All NSW") {
+    
+    location_name <- input$mainlocation
+    plot1 <-  df_location_nsw3 %>% 
+              filter(notification_date > as.Date(selected_period)) %>% 
+              ggplot(aes(x = notification_date, y = cases)) +
+                geom_col(fill = "dodgerblue") + 
+                plotdetails(location_name, 1.2, 10)
+  } 
+  
+  # Epicurves for all Metropolitan LHD
+  if (input$mainlocation == "LHD" & input$grouplhd == "Metropolitan LHD" &
+      input$specificlhd == "All Metropolitan LHD") {
+    
+    location_name <- input$grouplhd
+    plot1 <- df_location_lhd_loc_metro %>% 
+            filter(notification_date > as.Date(selected_period)) %>% 
+            ggplot(aes(x = notification_date, y = cases)) +
+              geom_col(aes(fill = lhd_2010_name)) + 
+              facet_wrap(.~lhd_2010_name, scales = 'free_x') +
+              plotdetails(location_name, 1, 6)
+  } 
+  
+  # Epicurves for all Rural and Regional LHD
+  if (input$mainlocation == "LHD" & input$grouplhd == "Rural and Regional NSW LHD" &
+      input$specificlhd == "All Rural and Regional LHD") {
+    
+    location_name <- input$grouplhd
+    plot1 <- df_location_lhd_loc_rural %>% 
+              filter(notification_date > as.Date(selected_period)) %>%
+              ggplot(aes(x = notification_date, y = cases)) +
+              geom_col(aes(fill = lhd_2010_name)) + 
+              facet_wrap(.~lhd_2010_name, scales = 'free_x') +
+              plotdetails(location_name, 1, 6)
+  } 
+  
+  # Epicurve for specific metro LHD
+  if (input$mainlocation == "LHD" & input$grouplhd == "Metropolitan LHD" &
+      input$specificlhd %in% metro_lhd) {
+    
+    location_name <- input$specificlhd
+    plot1 <- df_location_lhd_loc_metro %>% 
+              filter(lhd_2010_name == location_name ) %>% 
+              filter(notification_date > as.Date(selected_period)) %>%
+              ggplot(aes(x = notification_date, y = cases)) +
+                geom_col(aes(fill = lhd_2010_name)) +
+                plotdetails(location_name, 1.2, 10)
+  } 
+  
+  # Epicurve for specific rural or regional LHD
+  if (input$mainlocation == "LHD" & input$grouplhd == "Rural and Regional NSW LHD" &
+      input$specificlhd %in% rural_lhd) {
+    
+    location_name <- input$specificlhd
+    plot1 <- df_location_lhd_loc_rural %>% 
+              filter(notification_date > as.Date(selected_period)) %>%
+              filter(lhd_2010_name == location_name ) %>% 
+              ggplot(aes(x = notification_date, y = cases)) +
+                geom_col(aes(fill = lhd_2010_name)) +
+                plotdetails(location_name, 1.2, 10)
+  }  
+  
+  # Use ggplotly to create plot. Add subtitle and caption          
+  text_lastdate <- glue::glue("Up to {max_notif_date}")
+  plot1 <- ggplotly(plot1, tooltip = c("x", "y")) %>% 
+            layout(annotations = 
+                list(x = 1, y = -0.05, 
+                    text = "Data source: From data.nsw.gov.au \"NSW COVID-19 cases by location\".", 
+                    showarrow = F, xref='paper', yref='paper', 
+                    xanchor='right', yanchor='auto', xshift=0, yshift=0,
+                    font=list(size= 10.5, color = "black"))) %>% 
+            layout(annotations = 
+                list(x = 0.01, y = 1.02, 
+                    text = text_lastdate, 
+                    showarrow = F, xref='paper', yref='paper', 
+                    xanchor='left', yanchor='auto', xshift=0, yshift=0,
+                    font=list(size= 14, color = "black")))
+  
+  return(plot1)
+})
+
+
+# Render the epicurve plots
+renderPlotly({
+  if (input$mainlocation == "------" ) {
+  lhdmap()
+  
+  }
+  else 
+  plot_lhd()
+  
+})
+
+```
+
+
+
+Cases by Age Group
+=======================================================================
+
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+### Overview
+
+This page shows the distribution of NSW total COVID-19 cases by age group. The actual number of cases are shown when hovering over the bar graph. Note that the very few cases with 'unknown' age were excluded in the plot.   
+
+The cumulative curves by age group over time for COVID-19 cases in NSW are also presented. 
+
+
+
+
+ Row
+-----------------------------------------------------------------------
+### Total COVID-19 Cases by age group 
+
+```{r p3 cases by age group}
+# Render the plot of total cases by age group 
+# Note: Few cases with unknown (or none) age group (~0 %) were excluded in the plot
+renderPlotly({ 
+   age_plot1 <- df_agegroup_cases %>% 
+              filter(Age_group != "None") %>% 
+              ggplot(aes(x = Age_group, y = cases)) +
+              geom_col(fill = "lightpink3") +
+              geom_text(aes(label = percentage), size = 3.5,
+                        hjust = 0.60) +
+              scale_y_continuous(labels = comma) +
+              labs(x = "Age Group",
+                   y = "COVID-19 Confirmed cases",
+                   title = "NSW COVID-19 total confirmed cases distribution by age group") +
+              coord_flip() +
+              theme_minimal() + 
+              theme(axis.text.y = element_text(size = rel(1)),
+                  axis.text.x = element_text(size = rel(1)),
+                  axis.title = element_text(size = rel(0.85), face = 'bold'),
+                  plot.title = element_text(size = rel(0.85), face = 'bold'))
+    
+    # Use ggplotly to create plot. Add subtitle and caption          
+    text_lastdate <- glue::glue("Up to {max_notif_date}") 
+    age_plot <- ggplotly(age_plot1, tooltip = "y") %>% 
+            layout(annotations = 
+                list(x = 1, y = 1.025, 
+                    text = "Data source: From data.nsw.gov.au \"NSW COVID-19 cases by age range\".", 
+                    showarrow = F, xref='paper', yref='paper', 
+                    xanchor='right', yanchor='auto', xshift=0, yshift=0,
+                    font=list(size= 10, color = "black"))) %>% 
+            layout(annotations = 
+                list(x = 0.01, y = 1.05, 
+                    text = text_lastdate, 
+                    showarrow = F, xref='paper', yref='paper', 
+                    xanchor='left', yanchor='auto', xshift=0, yshift=0,
+                    font=list(size= 10, color = "black")))
+    
+    age_plot
+})
+```
+
+
+
+
+<!-- Row  -->
+<!-- ----------------------------------------------------------------------- -->
+### NSW COVID-19 cases cumulative curves 
+
+
+```{r}
+# Create a temporary output file
+#  outfile <- tempfile(fileext = '.gif')
+
+renderPlotly({  
+# Create animated line plot
+  plot_cs <- cs_agegroup %>% 
+            filter(Age_group != "None") %>%
+            ggplot(aes(x = as.Date(notification_date), y = cumulative_cases, group = Age_group)) +
+            geom_line(aes(color = Age_group), size = 0.5) +
+            geom_point(aes(color = Age_group), size = 0.5, show.legend = FALSE) +
+            theme_minimal() +
+            theme(legend.position = "right",
+                  axis.text.y = element_text(size = rel(1)),
+                  axis.text.x = element_text(size = rel(1)),
+                  axis.title = element_text(size = rel(1), face = 'bold'),
+                  plot.title = element_text(size = rel(1), face = 'bold'),
+                  legend.title = element_text(size = rel(0.7), face = 'bold'),
+                  legend.text = element_text(size = rel(0.7))) +
+            scale_x_date(date_labels = "%d %b %y",
+                                breaks = pretty_breaks(n = 8)) +
+            scale_y_continuous(trans = "log10", 
+                               breaks = c(1, 5, 10, 50, 100, 250, 500, 1000, 2500, 5000, 
+                                          10000, 25000, 50000,
+                                          100000, 250000, 500000, 1000000), 
+                               labels = comma) +
+            labs(title = "NSW COVID-19 Cumulative curves for confirmed cases by age group",
+                         subtitle = glue::glue("Up to {max_notif_date}"),
+                         x = "Date", 
+                         y = "Cumulative sum of cases (log scale)",
+                         caption = "Data source: From data.nsw.gov.au \"NSW COVID-19 cases by age range\"." )
+            #+ transition_reveal(daynum)
+    
+    # anim_save("outfile.gif", animation = plot_cs,
+    #                          duration = 50, height= 800, width=700, detail=5, 
+    #                          start_pause=5, end_pause=10, rewind = FALSE,
+    #                          renderer = gifski_renderer(loop = FALSE))
+    # 
+    # # return the image
+    # knitr::include_graphics("outfile.gif")
+
+  plot_cs
+})
+```
+
+
+
+
+
+
+Data Source 
+======================================================================
+
+
+
+Column
+-----------------------------------------------------------------------
+### Data Source
+
+
+The source datasets were originally found on https://data.nsw.gov.au/
+
+Datasets:
+
+  1. "NSW COVID-19 cases by location"
+
+  2. "NSW COVID-19 cases by age range"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
