@@ -4,7 +4,9 @@
 # page1 part4 extracting map shapes-LHD
 
 # Extract shape 
-nswlgas <- read_sf("NOV21_NSW_LGA_POLYGON_shp/nsw_lga.shp")
+#nswlgas <- read_sf("NOV21_NSW_LGA_POLYGON_shp/nsw_lga.shp") -- update
+nswlgas <- sf::st_read("NOV21_NSW_LGA_POLYGON_shp/nsw_lga.shp")
+nswlgas <- sf::st_transform(nswlgas, 4326)
 
 # 1. Extracting shape files for LHD
 
@@ -48,7 +50,7 @@ nswlgas_simplified_2polys <- left_join(nswlgas_simplified_2, df_location_lga_com
 # Create LHS table for rendering
 lhd_cases_table <- df_location_map %>%
   select(LHD_name, cases_lastday, lhd_cases_thisweek, cumulated_cases) %>% 
-  arrange(desc(cases_lastday))
+  arrange(desc(cumulated_cases))
 # Rename LHD column names
 lhd_cases_table <- rename(lhd_cases_table, c(LHD = LHD_name, "Reporting Day" = cases_lastday,
                                              "Reporting Week" = lhd_cases_thisweek, "Total Cases" = cumulated_cases))
@@ -57,7 +59,7 @@ lhd_cases_table <- rename(lhd_cases_table, c(LHD = LHD_name, "Reporting Day" = c
 # Create LGA table for rendering
 lga_cases_table <- df_location_lga_comb %>% 
   select(LGA_NAME, cases_lastday, lga_cases_thisweek, cumulated_cases) %>% 
-  arrange(desc(cases_lastday))
+  arrange(desc(cumulated_cases))
 
 # Rename LGA column names
 lga_cases_table <- rename(lga_cases_table, c(LGA = LGA_NAME, "Reporting Day" = cases_lastday,
