@@ -170,8 +170,8 @@ Row
 # Create NSW map with leaflet
 
 # Create color palette base on total cases
-cases_pal <- colorNumeric(c("lightyellow", "darkred"), c(0, 500000))
-cases_pal2 <- colorNumeric(c("lightyellow", "darkblue"), c(0, 175000))
+cases_pal <- colorNumeric(c("lightyellow", "darkred"), c(0, 550000))
+cases_pal2 <- colorNumeric(c("lightyellow", "darkblue"), c(0, 210000))
 
 # Create labels
 labels_content <- paste0(
@@ -520,15 +520,13 @@ renderPlotly({
 ### NSW COVID-19 cases cumulative curves {.agegroup2}
 
 ```{r}
-# Create a temporary output file
-#  outfile <- tempfile(fileext = '.gif')
 
 renderPlotly({  
-# Create animated line plot
+# Create line plot
   plot_cs <- cs_agegroup %>% 
             filter(Age_group != "None") %>%
             ggplot(aes(x = as.Date(notification_date), y = cumulative_cases, group = Age_group)) +
-            geom_line(aes(color = Age_group), size = 0.5) +
+            geom_line(aes(color = Age_group), linewidth = 0.5) +
             geom_point(aes(color = Age_group), size = 0.5, show.legend = FALSE) +
             theme_minimal() +
             theme(legend.position = "right",
@@ -540,26 +538,11 @@ renderPlotly({
                   legend.text = element_text(size = rel(0.8))) +
             scale_x_date(date_labels = "%d %b %y",
                                 breaks = pretty_breaks(n = 8)) +
-            scale_y_continuous(trans = "log10", 
-                               breaks = c(1, 5, 10, 50, 100, 250, 500, 1000, 2500, 5000, 
-                                          10000, 25000, 50000,
-                                          100000, 250000, 500000, 1000000), 
-                               labels = comma) +
             labs(title = "NSW COVID-19 Cumulative curves for confirmed cases by age group",
                          subtitle = glue::glue("Up to {max_notif_date}"),
                          x = "Date", 
-                         y = "Cumulative sum of cases (log scale)",
+                         y = "Cumulative sum of cases",
                          caption = "Data source: From data.nsw.gov.au \"NSW COVID-19 cases by age range\"." )
-            #+ transition_reveal(daynum)
-    
-    # anim_save("outfile.gif", animation = plot_cs,
-    #                          duration = 50, height= 800, width=700, detail=5, 
-    #                          start_pause=5, end_pause=10, rewind = FALSE,
-    #                          renderer = gifski_renderer(loop = FALSE))
-    # 
-    # # return the image
-    # knitr::include_graphics("outfile.gif")
-
   plot_cs
 })
 ```
