@@ -5,7 +5,7 @@
 
 **Link to the Dashboard**
 
-* *Access the dashboard here:* [New South Wales COVID-19 Cases Dashboard](http://mmg1217.shinyapps.io/Aus_public_hospitals){:target="_blank"}
+* *Access the dashboard here:* [New South Wales COVID-19 Cases Dashboard](http://mmg1217.shinyapps.io/nsw_covid_dashboard){:target="_blank"}
 
 
 ***
