@@ -1,22 +1,65 @@
-# NSW-COVID-Dashboard-with-R
+# New South Wales COVID-19 Cases Dashboard 
+
+***
+#### Description 
+
+**Link to the Dashboard**
+
+* *Access the dashboard here:* [New South Wales COVID-19 Cases Dashboard](http://mmg1217.shinyapps.io/Aus_public_hospitals){:target="_blank"}
 
 
-### Image 1
+***
 
-![Image 1- LHD](images/image01.png)
+#### Functionality
 
-### Image 2
+**A. Case Summaries**
 
-![Image 2- LGA](images/image02.png)
+**B. Epicurves**
 
-### Image 3
+**C. Cases by age group**
 
-![Image 3- Epicurves-all nsw](images/image03.png)
 
-### Image 4
+<br>
 
-![Image 4- Epicurves-LHD](images/image04.png)
 
-### Image 5
+***Data source***
 
-![Image 5- Age group](images/image05.png)
+* The datasets were  sourced from a NSW government site - Data.NSW (https://data.nsw.gov.au/). 
+* The datasets used were: (i) "NSW COVID-19 cases by location"; and (ii) "NSW COVID-19 cases by age range"
+
+
+
+
+***
+
+#### Preview
+
+<br>
+
+**Case Summaries**
+
+![](images/nsw_image1.png)
+
+<br>
+
+**Case Summaries**
+
+![](images/nsw_image2.png)
+
+<br>
+
+**Epicurves**
+
+![](images/nsw_image3.png)
+
+<br>
+
+**Epicurves**
+
+![](images/nsw_image4.png)
+
+<br>
+
+**Cases by age group**
+
+![](images/nsw_image5.png)
