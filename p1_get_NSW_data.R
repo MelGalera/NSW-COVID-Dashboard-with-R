@@ -15,7 +15,8 @@ by_agegroup_url <- ("https://data.nsw.gov.au/data/dataset/3dc5dc39-40b4-4ee9-8ec
 # df_agegroup <- read.csv(url(by_agegroup_url))
 
 # Note: the data repository has stopped updating with the last update on 31/10/2023
-# Hence, the latest aggregated data were downloaded and can be loaded as below:
+# Hence, the latest aggregated data were downloaded and used instead to avoid any issues with deployment.
+# The data can be loaded as below:
 
 # Create location dataset with latest data
 df_location <- read.csv("./data/confirmed_cases_table1_location_agg.csv")

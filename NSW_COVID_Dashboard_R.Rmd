@@ -4,10 +4,10 @@ title: "NSW COVID-19 Cases Dashboard"
 #date: "2024-03-30"
 output:
   flexdashboard::flex_dashboard:
-    orientation: rows
+    #orientation: rows
     theme:
       version: 4
-      bootswatch: cosmo
+      #bootswatch: cosmo
       bg: "#101010"
       fg: "#FDF7F7"
       primary: "#ED79F9"
@@ -29,6 +29,21 @@ runtime: shiny
 <style type="text/css">
 .sidebar {
 font-size: 13px;
+}
+.datatable {
+font-size: 13px;
+}
+.nswmap {
+padding: 10px;
+}
+.plots {
+padding: 10px;
+}
+.agegroup1 {
+padding: 10px;
+}
+.agegroup2 {
+padding: 10px;
 }
 </style type="text/css">
 
@@ -52,7 +67,7 @@ library(stringr)
 library(viridis)
 
 
-knitr::opts_chunk$set(cache = FALSE)
+knitr::opts_chunk$set(cache = FALSE, warning = FALSE, message= FALSE)
 ```
 
 ```{r load scripts, cache=FALSE, include=FALSE}
@@ -62,9 +77,6 @@ source("p3_create_epicurves.R")
 source("p4_create_agegroup.R")
 
 ```
-
-
-
 
 
 Cases Summaries {data-orientation=rows}
@@ -86,9 +98,7 @@ radioButtons('category', 'Select Summary Table by:',
                "Local Government Area (LGA)" = "lga"))
 ```
 
-
-
-Row {data-height=120}
+Row 
 -----------------------------------------------------------------------
 
 ### Cases on the last date {.value-box}{.no-padding}
@@ -150,31 +160,13 @@ renderValueBox({
 ```
 
 
-
-Row {data-height=880}
+Row 
 -----------------------------------------------------------------------
 
-### Cases Summary Table
-
-```{r p1 summary tables, fig.width = 250}
-# Render summary tables
-renderTable({
-  if (input$category == "lhd") {
-  table <- lhd_cases_table
-  }
-  else 
-  if (input$category == "lga") {
-  table <- lga_cases_table
-  }
-  table
-}, rownames = TRUE, width = "auto")
-
-```
+### Local COVID-19 transmission in New South Wales {.nswmap}
 
 
-### Local COVID-19 transmission in New South Wales
-
-```{r p1 create transmission map, fig.width = 350}
+```{r p1 create transmission map, fig.width = 410}
 # Create NSW map with leaflet
 
 # Create color palette base on total cases
@@ -234,7 +226,7 @@ renderLeaflet({
                                            dashArray = "",
                                            bringToFront = TRUE),
                     group = "By LGA") %>%
-              addLegend("bottomleft", 
+              addLegend("bottomright", 
                     pal = cases_pal, 
                     values =  nswlhds_simplified_polys$cumulated_cases,
                     title = "COVID-19 Cumulative cases by LHD",
@@ -248,22 +240,36 @@ renderLeaflet({
                     group = "By LGA") %>% 
               addLayersControl(
                     position = "topleft",
-                    baseGroups = c("By LHD", "By LGA"),
+                    overlayGroups = c("By LHD", "By LGA"),
                     options = layersControlOptions(collapsed = FALSE)
                      ) %>% 
               hideGroup(c("By LHD", "By LGA")) %>% 
               showGroup("By LHD")
-})  
-## Note: Tried to toggle between legend of different layers but could not work it out. Tried googling online but the work-around would not render the desired output.
+    })  
 
 ```
 
 
+### Cases Summary Table {.datatable}
+
+```{r p1 summary tables, fig.width = 190}
+# Render summary tables
+renderTable({
+  if (input$category == "lhd") {
+  table <- lhd_cases_table
+  }
+  else 
+  if (input$category == "lga") {
+  table <- lga_cases_table
+  }
+  table
+}, rownames = TRUE, width = "auto")
+
+```
 
 
 LHD Epicurves {data-orientation=rows}
 ======================================================================
-
 
 
 Inputs {.sidebar}
@@ -300,11 +306,10 @@ actionButton('go_plot', 'Go')
 ```
 
 
-
 Row
 -----------------------------------------------------------------------
 
-### Epicurves or daily count of incident (new) cases 
+### Epicurves or daily count of incident (new) cases {.plots}
 
 ```{r p2 epicurves}
 
@@ -426,13 +431,13 @@ plot_lhd <- eventReactive(input$go_plot, {
                     text = "Data source: From data.nsw.gov.au \"NSW COVID-19 cases by location\".", 
                     showarrow = F, xref='paper', yref='paper', 
                     xanchor='right', yanchor='auto', xshift=0, yshift=0,
-                    font=list(size= 10.5, color = "black"))) %>% 
+                    font=list(size= 9, color = "black"))) %>% 
             layout(annotations = 
-                list(x = 0.01, y = 1.02, 
+                list(x = 0.01, y = 1.03, 
                     text = text_lastdate, 
                     showarrow = F, xref='paper', yref='paper', 
                     xanchor='left', yanchor='auto', xshift=0, yshift=0,
-                    font=list(size= 14, color = "black")))
+                    font=list(size= 12, color = "black")))
   
   return(plot1)
 })
@@ -452,8 +457,7 @@ renderPlotly({
 ```
 
 
-
-Cases by Age Group
+Cases by Age Group 
 =======================================================================
 
 
@@ -467,10 +471,9 @@ Overview
 
 
 
-
  Row
 -----------------------------------------------------------------------
-### Total COVID-19 Cases by age group 
+### Total COVID-19 Cases by age group {.agegroup1}
 
 ```{r p3 cases by age group}
 # Render the plot of total cases by age group 
@@ -480,24 +483,24 @@ renderPlotly({
               filter(Age_group != "None") %>% 
               ggplot(aes(x = Age_group, y = cases)) +
               geom_col(fill = "lightpink3") +
-              geom_text(aes(label = percentage), size = 3.5,
-                        hjust = 0.60) +
+              geom_text(aes(label = percentage), size = 3,
+                        position = position_stack(vjust = 0.7)) +
               scale_y_continuous(labels = comma) +
               labs(x = "Age Group",
                    y = "COVID-19 Confirmed cases",
                    title = "NSW COVID-19 total confirmed cases distribution by age group") +
               coord_flip() +
               theme_minimal() + 
-              theme(axis.text.y = element_text(size = rel(1)),
-                  axis.text.x = element_text(size = rel(1)),
-                  axis.title = element_text(size = rel(0.85), face = 'bold'),
+              theme(axis.text.y = element_text(size = rel(0.9)),
+                  axis.text.x = element_text(size = rel(0.9)),
+                  axis.title = element_text(size = rel(0.75), face = 'bold'),
                   plot.title = element_text(size = rel(0.85), face = 'bold'))
     
     # Use ggplotly to create plot. Add subtitle and caption          
     text_lastdate <- glue::glue("Up to {max_notif_date}") 
     age_plot <- ggplotly(age_plot1, tooltip = "y") %>% 
             layout(annotations = 
-                list(x = 1, y = 1.025, 
+                list(x = 1, y = 1.03, 
                     text = "Data source: From data.nsw.gov.au \"NSW COVID-19 cases by age range\".", 
                     showarrow = F, xref='paper', yref='paper', 
                     xanchor='right', yanchor='auto', xshift=0, yshift=0,
@@ -514,12 +517,7 @@ renderPlotly({
 ```
 
 
-
-
-<!-- Row  -->
-<!-- ----------------------------------------------------------------------- -->
-### NSW COVID-19 cases cumulative curves 
-
+### NSW COVID-19 cases cumulative curves {.agegroup2}
 
 ```{r}
 # Create a temporary output file
@@ -534,12 +532,12 @@ renderPlotly({
             geom_point(aes(color = Age_group), size = 0.5, show.legend = FALSE) +
             theme_minimal() +
             theme(legend.position = "right",
-                  axis.text.y = element_text(size = rel(1)),
-                  axis.text.x = element_text(size = rel(1)),
-                  axis.title = element_text(size = rel(1), face = 'bold'),
-                  plot.title = element_text(size = rel(1), face = 'bold'),
-                  legend.title = element_text(size = rel(0.7), face = 'bold'),
-                  legend.text = element_text(size = rel(0.7))) +
+                  axis.text.y = element_text(size = rel(0.8)),
+                  axis.text.x = element_text(size = rel(0.9)),
+                  axis.title = element_text(size = rel(0.7), face = 'bold'),
+                  plot.title = element_text(size = rel(0.9), face = 'bold'),
+                  legend.title = element_text(size = rel(0.8), face = 'bold'),
+                  legend.text = element_text(size = rel(0.8))) +
             scale_x_date(date_labels = "%d %b %y",
                                 breaks = pretty_breaks(n = 8)) +
             scale_y_continuous(trans = "log10", 
@@ -567,19 +565,12 @@ renderPlotly({
 ```
 
 
-
-
-
-
 Data Source 
 ======================================================================
-
-
 
 Column
 -----------------------------------------------------------------------
 ### Data Source
-
 
 The source datasets were originally found on https://data.nsw.gov.au/
 
