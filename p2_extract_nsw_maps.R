@@ -4,9 +4,9 @@
 # page1 part4 extracting map shapes-LHD
 
 # Extract shape 
-#nswlgas <- read_sf("NOV21_NSW_LGA_POLYGON_shp/nsw_lga.shp") -- update
-nswlgas <- sf::st_read("NOV21_NSW_LGA_POLYGON_shp/nsw_lga.shp")
-nswlgas <- sf::st_transform(nswlgas, 4326)
+nswlgas <- read_sf("NOV21_NSW_LGA_POLYGON_shp/nsw_lga.shp")
+#nswlgas <- sf::st_read("NOV21_NSW_LGA_POLYGON_shp/nsw_lga.shp")
+#nswlgas <- sf::st_transform(nswlgas, 4326)
 
 # 1. Extracting shape files for LHD
 
