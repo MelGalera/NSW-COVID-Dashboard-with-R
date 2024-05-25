@@ -1,29 +1,29 @@
 ---
 title: "NSW COVID-19 Cases Dashboard"
-#author: "Melvin Galera"
-#date: "2024-03-30"
 output:
   flexdashboard::flex_dashboard:
-    #orientation: rows
     theme:
       version: 4
-      #bootswatch: cosmo
-      bg: "#101010"
-      fg: "#FDF7F7"
-      primary: "#ED79F9"
-      secondary: "darkred"
-      navbar-bg: "#3ADAC6"
+      bg: '#101010'
+      fg: '#FDF7F7'
+      primary: '#ED79F9'
+      secondary: darkred
+      navbar-bg: '#3ADAC6'
       base_font:
         google: Prompt
-      base_font-size: 0.8875 
+      base_font-size: 0.8875
       heading_font:
         google: Sen
-      code_font: 
+      code_font:
         google:
-          # arguments to sass::font_google()
           family: JetBrains Mono
           local: false
 runtime: shiny
+resource_files:
+- NOV21_NSW_LGA_POLYGON_shp/nsw_lga_locality.dbf
+- NOV21_NSW_LGA_POLYGON_shp/nsw_lga.dbf
+- NOV21_NSW_LGA_POLYGON_shp/nsw_lga.prj
+- NOV21_NSW_LGA_POLYGON_shp/nsw_lga.shx
 ---
 
 <style type="text/css">
