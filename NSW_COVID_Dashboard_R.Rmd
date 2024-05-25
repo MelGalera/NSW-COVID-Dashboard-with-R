@@ -4,6 +4,7 @@ title: "NSW COVID-19 Cases Dashboard"
 #date: "2024-03-30"
 output:
   flexdashboard::flex_dashboard:
+    orientation: rows
     theme:
       version: 4
       bootswatch: cosmo
@@ -14,7 +15,7 @@ output:
       navbar-bg: "#3ADAC6"
       base_font:
         google: Prompt
-      base_font-size: 0.8875  
+      base_font-size: 0.8875 
       heading_font:
         google: Sen
       code_font: 
@@ -24,6 +25,12 @@ output:
           local: false
 runtime: shiny
 ---
+
+<style type="text/css">
+.sidebar {
+font-size: 13px;
+}
+</style type="text/css">
 
 
 ```{r setup, include=FALSE}
@@ -57,11 +64,6 @@ source("p4_create_agegroup.R")
 ```
 
 
-<!--```{r, include=FALSE, context = "server"} 
-bslib::bs_themer() 
-
-``` -->
-
 
 
 
@@ -71,13 +73,12 @@ Cases Summaries {data-orientation=rows}
 
 Sidebar {.sidebar}
 -----------------------------------------------------------------------
-### Overview
 
-This page displays the number of COVID-19 cases from the last reported day (normally up to 4pm of the previous day), cases this week, last week and the total cases in all New South Wales. 
+Overview
 
-It also features cumulative cases mapped to locations by Local Health District (LHD) and Local Government Area (LGA). Last reported day cases and total or cumulative cases are also displayed when hovering over a specific location. Zoom in to view smaller metropolitan LHDs and Sydney LGAs.
-
-A Summary Table is provided to display COVID-19 case numbers for each LHD and LGA, arranged based on which area recorded the highest cases on the last reported day.  
+* Displays number of COVID-19 cases in New South Wales.
+* Features cumulative cases mapped to locations by LHD and LGA
+ 
 
 ```{r}
 radioButtons('category', 'Select Summary Table by:',
@@ -87,10 +88,10 @@ radioButtons('category', 'Select Summary Table by:',
 
 
 
-Row
+Row {data-height=120}
 -----------------------------------------------------------------------
 
-### Cases on the last date {.value-box}
+### Cases on the last date {.value-box}{.no-padding}
 
 ```{r p1 last date vbox}
 # Compute the total cases on the last reported date (max_notif_date)
@@ -104,7 +105,7 @@ renderValueBox({
 ```
 
 
-### Cases this week {.value-box}
+### Cases this week {.value-box}{.no-padding}
 
 ```{r p1 this week vbox}
 # Compute the total cases on this week
@@ -120,7 +121,7 @@ renderValueBox({
 ```
 
 
-### Cases last week {.value-box}
+### Cases last week {.value-box}{.no-padding}
 
 ```{r p1 last week vbox}
 # Compute the total cases on last week
@@ -136,7 +137,7 @@ renderValueBox({
 })
 ```
 
-### Total cases since the start {.value-box}
+### Total cases since the start {.value-box}{.no-padding}
 
 ```{r p1 total cases vbox}
 # Calculate total cases since the start (first date)
@@ -150,8 +151,26 @@ renderValueBox({
 
 
 
-Row 
+Row {data-height=880}
 -----------------------------------------------------------------------
+
+### Cases Summary Table
+
+```{r p1 summary tables, fig.width = 250}
+# Render summary tables
+renderTable({
+  if (input$category == "lhd") {
+  table <- lhd_cases_table
+  }
+  else 
+  if (input$category == "lga") {
+  table <- lga_cases_table
+  }
+  table
+}, rownames = TRUE, width = "auto")
+
+```
+
 
 ### Local COVID-19 transmission in New South Wales
 
@@ -240,24 +259,6 @@ renderLeaflet({
 ```
 
 
-### Cases Summary Table
-
-```{r p1 summary tables, fig.width = 250}
-# Render summary tables
-renderTable({
-  if (input$category == "lhd") {
-  table <- lhd_cases_table
-  }
-  else 
-  if (input$category == "lga") {
-  table <- lga_cases_table
-  }
-  table
-}, rownames = TRUE, width = "auto")
-
-```
-
-
 
 
 LHD Epicurves {data-orientation=rows}
@@ -267,12 +268,13 @@ LHD Epicurves {data-orientation=rows}
 
 Inputs {.sidebar}
 -----------------------------------------------------------------------
-### COVID cases
 
-From this page, Epicurves of COVID-19 cases can be displayed based on selected location. It can display the general epicurve for the whole NSW, or based on selected LHD. Epicurves can be easily compared for areas within Metropolitan LHD or within the Rural and Regional LHD. Coverage period can also be selected. 
+Overview
 
-Figures will be displayed after the 'Go' button is clicked.    
+* Displays COVID-19 epicurve(s) 
+* Easily compares epicurves within Metropolitan LHD or Rural and Regional LHD
 
+**Figures are displayed after the 'Go' button is clicked**
 
 ```{r p2 input}
 
@@ -457,11 +459,11 @@ Cases by Age Group
 
 Inputs {.sidebar}
 -----------------------------------------------------------------------
-### Overview
 
-This page shows the distribution of NSW total COVID-19 cases by age group. The actual number of cases are shown when hovering over the bar graph. Note that the very few cases with 'unknown' age were excluded in the plot.   
+Overview
 
-The cumulative curves by age group over time for COVID-19 cases in NSW are also presented. 
+* Displays distribution of NSW COVID-19 cases by age group 
+* Displays cumulative curves by age group over time for NSW COVID-19 cases 
 
 
 
