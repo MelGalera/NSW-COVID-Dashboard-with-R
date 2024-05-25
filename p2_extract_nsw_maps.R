@@ -19,16 +19,16 @@ nswlgas <- nswlgas %>%
   filter(!is.na(LHD_name))
 
 # group by LHD and remove interior boundaries of the union
-nswlhds <- nswlgas %>% 
-  group_by(LHD_name) %>% 
-  summarise(geometry = st_union(geometry))
+#nswlhds <- nswlgas %>% 
+#  group_by(LHD_name) %>% 
+#  summarise(geometry = st_union(geometry))
 
 # reduce the detail of the boundaries to a more manageable level
-nswlhds_simplified <- ms_simplify(nswlhds, keep = 0.1, keep_shapes = TRUE)
+#nswlhds_simplified <- ms_simplify(nswlhds, keep = 0.1, keep_shapes = TRUE)
 
 
 # Combine df_location_map with the polygon map
-nswlhds_simplified_polys <- left_join(nswlhds_simplified, df_location_map)
+#nswlhds_simplified_polys <- left_join(nswlhds_simplified, df_location_map)
 
 
 

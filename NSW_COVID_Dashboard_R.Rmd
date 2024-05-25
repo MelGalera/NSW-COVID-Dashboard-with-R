@@ -89,13 +89,13 @@ Sidebar {.sidebar}
 Overview
 
 * Displays number of COVID-19 cases in New South Wales.
-* Features cumulative cases mapped to locations by LHD and LGA
- 
+* Features cumulative cases mapped to locations by Local Government Areas (LGA)
+* Features cases summary table by LGA and an option to see summary table by LHD
 
 ```{r}
 radioButtons('category', 'Select Summary Table by:',
-             c("Local Health District(LHD)" = "lhd",
-               "Local Government Area (LGA)" = "lga"))
+             c("Local Government Area (LGA)" = "lga",
+               "Local Health District (LHD)" = "lhd"))
 ```
 
 Row 
@@ -110,7 +110,7 @@ renderValueBox({
                     filter(notification_date == max(notification_date)) %>% 
                     summarise(cases = sum(confirmed_cases_count))
   valueBox(formatC(last_day_cases$cases, big.mark = ","),
-           caption = glue::glue("Cases on last reporting day: {max_notif_date}"))
+           caption = glue::glue("Cases in NSW on last reporting day: {max_notif_date}"))
 })
 ```
 
@@ -126,7 +126,7 @@ renderValueBox({
                      summarise(cases = sum(confirmed_cases_count))
   weekstarter1 <- max(df_location_nsw$notification_date) - 6
   valueBox(formatC(this_week_cases$cases, big.mark = ","),
-           caption = glue::glue("Cases this week: {weekstarter1} to {max_notif_date}"))
+           caption = glue::glue("Cases in NSW this week: {weekstarter1} to {max_notif_date}"))
 })
 ```
 
@@ -143,7 +143,7 @@ renderValueBox({
   weekstarter2 <- max(df_location_nsw$notification_date) - 13
   weekender2 <- max(df_location_nsw$notification_date) - 7
   valueBox(formatC(last_week_cases$cases, big.mark = ","),
-           caption = glue::glue("Cases last week: {weekstarter2} to {weekender2}"))
+           caption = glue::glue("Cases in NSW last week: {weekstarter2} to {weekender2}"))
 })
 ```
 
@@ -155,7 +155,7 @@ renderValueBox({
   total_cases <- sum(df_location_lhd$cases, na.rm = TRUE) 
   startdate <- min(df_location_nsw$notification_date)
   valueBox(formatC(total_cases, big.mark = ","),
-           caption = glue::glue("Cases since {startdate}"))
+           caption = glue::glue("Cases in NSW since {startdate}"))
 })
 ```
 
@@ -163,24 +163,24 @@ renderValueBox({
 Row 
 -----------------------------------------------------------------------
 
-### Local COVID-19 transmission in New South Wales {.nswmap}
+### Local COVID-19 transmission in New South Wales LGAs {.nswmap}
 
 
 ```{r p1 create transmission map, fig.width = 410}
 # Create NSW map with leaflet
 
 # Create color palette base on total cases
-cases_pal <- colorNumeric(c("lightyellow", "darkred"), c(0, 550000))
-cases_pal2 <- colorNumeric(c("lightyellow", "darkblue"), c(0, 210000))
+cases_pal <- colorNumeric(c("lightyellow", "darkblue"), c(0, 550000))   # color changed from darkred
+cases_pal2 <- colorNumeric(c("lightyellow", "darkred"), c(0, 210000))   # color changed from darkblue 
 
 # Create labels
-labels_content <- paste0(
-         "<strong> LHD: </strong>", nswlhds_simplified_polys$LHD_name, "<br/>",
-         "<strong> Cases on </strong>", max_notif_date, "<strong> : </strong>", 
-                                       nswlhds_simplified_polys$cases_lastday, "<br/>",
-         "<strong> Cumulative Cases: </strong>", nswlhds_simplified_polys$cumulated_cases, "<br/>"
-          ) %>% 
-          lapply(htmltools::HTML)
+#labels_content <- paste0(
+#         "<strong> LHD: </strong>", nswlhds_simplified_polys$LHD_name, "<br/>",
+#         "<strong> Cases on </strong>", max_notif_date, "<strong> : </strong>", 
+#                                       nswlhds_simplified_polys$cases_lastday, "<br/>",
+#         "<strong> Cumulative Cases: </strong>", nswlhds_simplified_polys$cumulated_cases, "<br/>"
+#          ) %>% 
+#          lapply(htmltools::HTML)
 
 labels_content2 <- paste0(
           "<strong> LGA: </strong>", nswlgas_simplified_2polys$ABB_NAME, "<br/>",
@@ -195,22 +195,22 @@ labels_content2 <- paste0(
 renderLeaflet({
   mapcases <- leaflet() %>% 
               addTiles() %>% 
-              addPolygons(data = nswlhds_simplified_polys,
-                    weight = 2,
-                    color = "darkgrey",
-                    dashArray = "2",
-                    fillColor = cases_pal(nswlhds_simplified_polys$cumulated_cases),
-                    fillOpacity = 0.7,
-                    label = labels_content,
-                    labelOptions = labelOptions(style = list("font-weight" = "normal", 
-                                          padding = "3px 8px"),
-                                          textsize = "12px",
-                                          direction = "auto"),
-                    highlight = highlightOptions(color = "darkred",
-                                           weight = 2,
-                                           dashArray = "",
-                                           bringToFront = TRUE),
-                                           group = "By LHD") %>% 
+              #addPolygons(data = nswlhds_simplified_polys,
+              #      weight = 2,
+              #      color = "darkgrey",
+              #      dashArray = "2",
+              #      fillColor = cases_pal(nswlhds_simplified_polys$cumulated_cases),
+              #      fillOpacity = 0.7,
+              #      label = labels_content,
+              #      labelOptions = labelOptions(style = list("font-weight" = "normal", 
+              #                            padding = "3px 8px"),
+              #                            textsize = "12px",
+              #                            direction = "auto"),
+              #      highlight = highlightOptions(color = "darkblue",      # color changed from darkred
+              #                             weight = 2,
+              #                             dashArray = "",
+              #                             bringToFront = TRUE),
+              #                             group = "By LHD") %>% 
               addPolygons(data = nswlgas_simplified_2polys,
                     weight = 2,
                     color = "darkgrey",
@@ -221,30 +221,30 @@ renderLeaflet({
                     labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px"),
                                           textsize = "12px",
                                           direction = "auto"),
-                    highlight = highlightOptions(color = "darkblue",
+                    highlight = highlightOptions(color = "darkred",     # color changed from darkblue
                                            weight = 2,
                                            dashArray = "",
                                            bringToFront = TRUE),
                     group = "By LGA") %>%
+              #addLegend("bottomright", 
+              #      pal = cases_pal, 
+              #      values =  nswlhds_simplified_polys$cumulated_cases,
+              #      title = "COVID-19 Cumulative cases by LHD",
+              #      opacity = 1,
+              #      group = "By LHD") %>% 
               addLegend("bottomright", 
-                    pal = cases_pal, 
-                    values =  nswlhds_simplified_polys$cumulated_cases,
-                    title = "COVID-19 Cumulative cases by LHD",
-                    opacity = 1,
-                    group = "By LHD") %>% 
-              addLegend("bottomright", 
-                    pal = cases_pal2, 
+                    pal = cases_pal2,                  
                     values =  nswlgas_simplified_2polys$cumulated_cases,
                     title = "COVID-19 Cumulative cases by LGA",
                     opacity = 1,
                     group = "By LGA") %>% 
               addLayersControl(
                     position = "topleft",
-                    overlayGroups = c("By LHD", "By LGA"),
+                    #overlayGroups = c("By LHD", "By LGA"), 
                     options = layersControlOptions(collapsed = FALSE)
                      ) %>% 
-              hideGroup(c("By LHD", "By LGA")) %>% 
-              showGroup("By LHD")
+              #hideGroup(c("By LHD", "By LGA")) %>% 
+              showGroup("By LGA") # changed from LHD
     })  
 
 ```
@@ -277,8 +277,9 @@ Inputs {.sidebar}
 
 Overview
 
-* Displays COVID-19 epicurve(s) 
+* Displays COVID-19 epicurve(s) for NSW and Local Health Districts (LHD) 
 * Easily compares epicurves within Metropolitan LHD or Rural and Regional LHD
+* Features option to select coverage period/year
 
 **Figures are displayed after the 'Go' button is clicked**
 
