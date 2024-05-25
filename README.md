@@ -42,7 +42,7 @@
 
 <br>
 
-**Case Summaries**
+**Epicurves**
 
 ![](images/nsw_image2.png)
 
@@ -54,12 +54,6 @@
 
 <br>
 
-**Epicurves**
-
-![](images/nsw_image4.png)
-
-<br>
-
 **Cases by age group**
 
-![](images/nsw_image5.png)
+![](images/nsw_image4.png)
