@@ -28,10 +28,10 @@ resource_files:
 
 <style type="text/css">
 .sidebar {
-font-size: 13px;
+font-size: 15px;
 }
 .datatable {
-font-size: 13px;
+font-size: 14px;
 }
 .nswmap {
 padding: 10px;
@@ -166,7 +166,7 @@ Row
 ### Local COVID-19 transmission in New South Wales LGAs {.nswmap}
 
 
-```{r p1 create transmission map, fig.width = 410}
+```{r p1 create transmission map, fig.width = 370}
 # Create NSW map with leaflet
 
 # Create color palette base on total cases
@@ -252,7 +252,7 @@ renderLeaflet({
 
 ### Cases Summary Table {.datatable}
 
-```{r p1 summary tables, fig.width = 190}
+```{r p1 summary tables, fig.width = 230}
 # Render summary tables
 renderTable({
   if (input$category == "lhd") {
