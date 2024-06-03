@@ -1,10 +1,6 @@
 # New South Wales COVID-19 Cases Dashboard 
 
 ***
-**Link to the Dashboard**
-
-*Access the dashboard here:* [New South Wales COVID-19 Cases Dashboard](https://mmg1217.shinyapps.io/nsw_covid_dashboard/){:target="_blank"}
-
 
 <br>
 
@@ -13,6 +9,10 @@
   <h4> Description </h4>
   <p> This dashboard shows the public hospitals in Australia</p>
 </div>
+
+**Link to the Dashboard**
+
+*Access the dashboard here:* [New South Wales COVID-19 Cases Dashboard](https://mmg1217.shinyapps.io/nsw_covid_dashboard/){:target="_blank"}
 
 
 ***
