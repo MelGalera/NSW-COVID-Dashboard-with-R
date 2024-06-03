@@ -4,7 +4,7 @@
 <br>
 
 <div class = "clear-fix">
-  <img src="assets/images/covid_img.png" style="float:right;width:400px;"/>
+  <img src="assets/images/covid2_img.png" style="float:right;width:400px;"/>
   <h4> Description </h4>
   <p> This dashboard shows the public hospitals in Australia</p>
 </div>
