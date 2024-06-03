@@ -1,7 +1,13 @@
 # New South Wales COVID-19 Cases Dashboard 
 
 ***
-#### Description 
+<br>
+
+<div class = "clear-fix">
+  <img src="assets/images/covid_img.png" style="float:right;width:400px;"/>
+  <h4> Description </h4>
+  <p> This dashboard shows the public hospitals in Australia</p>
+</div>
 
 **Link to the Dashboard**
 
@@ -9,6 +15,7 @@
 
 
 ***
+<br>
 
 #### Functionality
 
@@ -24,13 +31,14 @@
 
 ***Data source***
 
-* The datasets were  sourced from a NSW government site - Data.NSW (https://data.nsw.gov.au/). 
+* The datasets were  sourced from a NSW government site - Data.NSW at [https://data.nsw.gov.au/](https://data.nsw.gov.au/). 
 * The datasets used were: (i) "NSW COVID-19 cases by location"; and (ii) "NSW COVID-19 cases by age range"
 
 
 
 
 ***
+<br>
 
 #### Preview
 
@@ -57,3 +65,9 @@
 **Cases by age group**
 
 ![](images/nsw_image4.png)
+
+<br>
+<br>
+<br>
+****
+*Image by [Freepik](https://data.nsw.gov.au/).*
