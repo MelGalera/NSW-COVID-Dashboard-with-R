@@ -34,8 +34,8 @@
 * The datasets were  sourced from a NSW government site - Data.NSW at [https://data.nsw.gov.au/](https://data.nsw.gov.au/). 
 * The datasets used were: (i) "NSW COVID-19 cases by location"; and (ii) "NSW COVID-19 cases by age range"
 
-
-
+<br>
+*Image by [Freepik](https://www.freepik.com/).*
 
 ***
 <br>
@@ -69,5 +69,4 @@
 <br>
 <br>
 <br>
-****
-*Image by [Freepik](https://data.nsw.gov.au/).*
+
