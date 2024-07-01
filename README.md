@@ -5,9 +5,9 @@
 <br>
 
 <div class = "clear-fix">
-  <img src="assets/images/covid2_img.png" style="float:right;width:400px;"/>
+  <img src="assets/images/covid2_img.png" style="float:right;width:450px;margin-left:50px"/>
   <h4> Description </h4>
-  <p> This dashboard shows the public hospitals in Australia</p>
+  <p align="justify"> This dashboard was created in 2023 to monitor the daily reported cases of COVID-19 in New South Wales. The dashboard updated automatically based on the number of cases published daily on NSW Health’s website up until the last published data on 13 October 2023. The starting reporting date was 25 January 2020.  The dashboard has 3 tabs: case summaries, epicurves, and cases by age group.</p>
 </div>
 
 **Link to the Dashboard**
@@ -20,12 +20,24 @@
 
 #### Functionality
 
-**A. Case Summaries**
+**A. Case Summaries Tab**
 
-**B. Epicurves**
+* displays number of cases on the last reporting day, within the week, the last week, and the total cases since the starting date.
+* features cumulative cases mapped to  NSW local government areas (LGAs)
+* features cases summary table by NSW LGAs or by NSW local health districts (LHDs)
 
-**C. Cases by age group**
 
+**B. LHD Epicurves Tab**
+
+* displays COVID-19 epicurve(s) for NSW or for the selected LHD
+* can compare epicurves within Metropolitan LHD or Rural & Regional LHD
+* features option to select year(s) duration
+
+
+**C. Cases by Age group Tab**
+
+* displays distribution of NSW COVID-19 cases by age group
+* displays the cumulative sum of cases over time by age group
 
 <br>
 
@@ -42,8 +54,6 @@
 <br>
 
 #### Preview
-
-<br>
 
 **Case Summaries**
 
